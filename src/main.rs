@@ -17,4 +17,5 @@ fn main() {
 
     let mut symbol_table = symbols::SymbolTable::new();
     symbol_table.parse_symbol_table(&args[1]);
+    symbol_table.print_symbol_table();
 }

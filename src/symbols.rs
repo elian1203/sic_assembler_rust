@@ -1,16 +1,14 @@
 use std::cell::Cell;
-use std::env::current_exe;
-use std::fmt::Display;
 use std::process::exit;
 use std::string::String;
 
-use crate::util;
 use crate::instructions;
-use crate::instructions::{is_directive, is_instruction};
+use crate::instructions::*;
+use crate::util;
 
 struct Symbol {
 	name: String,
-	memory_location: i32,
+	memory_location: Cell<i32>,
 }
 
 pub struct SymbolTable {
@@ -39,6 +37,8 @@ impl SymbolTable {
 
 pub trait SymbolTablePublic {
 	fn parse_symbol_table(&mut self, filename: &str);
+	fn contains_symbol(&self, name: &str) -> bool;
+	fn print_symbol_table(&self);
 }
 
 impl SymbolTablePublic for SymbolTable {
@@ -55,13 +55,44 @@ impl SymbolTablePublic for SymbolTable {
 					self.parse_line(line_str, line_number, &mut current_memory_location);
 				}
 			}
+
+			if current_memory_location > 1048576 {
+				println!("Error (line {}): SIC memory exceeded!", line_number);
+				exit(1);
+			}
+
+			if self.starting_memory_location.get() == -1 {
+				println!("Error (line {}): No START directive found!", line_number);
+				exit(1);
+			}
+
+			self.total_memory_usage.set(current_memory_location);
+
+			for symbol in &self.symbols {
+				symbol.memory_location.set(symbol.memory_location.get() + self.starting_memory_location.get());
+			}
+		}
+	}
+
+	fn contains_symbol(&self, name: &str) -> bool {
+		for symbol in &self.symbols {
+			if symbol.name == name {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	fn print_symbol_table(&self) {
+		for symbol in &self.symbols {
+			println!("{: >6}\t{:X}", symbol.name, symbol.memory_location.get());
 		}
 	}
 }
 
 trait SymbolTablePrivate {
 	fn parse_line(&mut self, line: String, line_number: i32, current_memory_location: &mut i32);
-	fn handle_instruction(&self, line_number: i32, current_memory_location: &mut i32, instruction: &str, operand: Option<&str>);
+	fn handle_instruction(&self, current_memory_location: &mut i32, instruction: &str);
 	fn handle_directive(&self, line_number: i32, current_memory_location: &mut i32, directive: &str, operand: Option<&str>);
 	fn add_symbol(&mut self, line_number: i32, name: &str, memory_location: i32);
 }
@@ -73,7 +104,7 @@ impl SymbolTablePrivate for SymbolTable {
 			return;
 		}
 
-		println!("{}", line);
+		// println!("{}", line);
 		let split: Vec<String> = sic_line_to_vector(line);
 
 		if split.len() == 0 {
@@ -86,21 +117,21 @@ impl SymbolTablePrivate for SymbolTable {
 				exit(1);
 			}
 
-			self.handle_instruction(line_number, current_memory_location, str1, None);
+			self.handle_instruction(current_memory_location, str1);
 		} else if split.len() == 2 {
 			let str1 = split.get(0).unwrap();
 			let str2 = split.get(1).unwrap();
 
 			if is_instruction(str1) {
-				self.handle_instruction(line_number, current_memory_location, str1, Some(str2));
+				self.handle_instruction(current_memory_location, str1);
 			} else if is_instruction(str2) {
-				self.handle_instruction(line_number, current_memory_location, str2, None);
 				self.add_symbol(line_number, str1, *current_memory_location);
+				self.handle_instruction(current_memory_location, str2);
 			} else if is_directive(str1) {
 				self.handle_directive(line_number, current_memory_location, str1, Some(str2))
 			} else if is_directive(str2) {
-				self.handle_directive(line_number, current_memory_location, str2, None);
 				self.add_symbol(line_number, str1, *current_memory_location);
+				self.handle_directive(line_number, current_memory_location, str2, None);
 			} else {
 				println!("Error (line {}): Invalid line! Not an instruction or directive!", line_number);
 				exit(1);
@@ -111,11 +142,15 @@ impl SymbolTablePrivate for SymbolTable {
 			let str3 = split.get(2).unwrap();
 
 			if is_instruction(str2) {
-				self.handle_instruction(line_number, current_memory_location, str2, Some(str3));
 				self.add_symbol(line_number, str1, *current_memory_location);
+				self.handle_instruction(current_memory_location, str2);
 			} else if is_directive(str2) {
-				self.handle_directive(line_number, current_memory_location, str2, Some(str3));
 				self.add_symbol(line_number, str1, *current_memory_location);
+				self.handle_directive(line_number, current_memory_location, str2, Some(str3));
+
+				if str2 == "START" {
+					self.program_name.set(str2.clone());
+				}
 			} else {
 				println!("Error (line {}): Invalid line! Not an instruction or directive!", line_number);
 				exit(1);
@@ -123,7 +158,12 @@ impl SymbolTablePrivate for SymbolTable {
 		}
 	}
 
-	fn handle_instruction(&self, line_number: i32, current_memory_location: &mut i32, instruction: &str, operand: Option<&str>) {}
+	fn handle_instruction(&self, current_memory_location: &mut i32, instruction: &str) {
+		if self.first_instruction.get() == -1 {
+			self.first_instruction.set(*current_memory_location);
+		}
+		*current_memory_location += get_instruction_format(instruction);
+	}
 
 	fn handle_directive(&self, line_number: i32, current_memory_location: &mut i32, directive: &str, operand: Option<&str>) {
 		match directive {
@@ -179,10 +219,38 @@ impl SymbolTablePrivate for SymbolTable {
 	fn add_symbol(&mut self, line_number: i32, name: &str, memory_location: i32) {
 		let str = String::from(name);
 
-		// TODO: Add bad symbol checks
+		let first_char = str.chars().next().unwrap();
+
+		if !first_char.is_alphabetic() || !first_char.is_uppercase() {
+			println!("Error (line {}): Symbol must start with uppercase alpha character.", line_number);
+			exit(1);
+		} else if str.len() > 6 {
+			println!("Error (line {}): Symbol greater than max length (6)", line_number);
+			exit(1);
+		} else if str.contains("$") || str.contains("!") || str.contains("=")
+			|| str.contains("+") || str.contains("-") || str.contains("(")
+			|| str.contains(")") || str.contains("@") {
+			println!("Error (line {}): Symbol contains illegal characer", line_number);
+			exit(1);
+		} else if is_directive(str.as_str()) {
+			println!("Error (line {}): Symbol cannot be a directive name!", line_number);
+			exit(1);
+		} else if self.contains_symbol(str.as_str()) {
+			println!("Error (line {}): Symbol already exists!", line_number);
+			exit(1);
+		}
+
+		for c in str.chars() {
+			if c.is_alphabetic() && !c.is_uppercase() {
+				println!("Error (line {}): Symbol cannot contain lowercase letters!", line_number);
+				exit(1);
+			}
+		}
+		let location = Cell::new(memory_location);
+
 		let symbol = Symbol {
 			name: str,
-			memory_location,
+			memory_location: location,
 		};
 		self.symbols.push(symbol);
 	}

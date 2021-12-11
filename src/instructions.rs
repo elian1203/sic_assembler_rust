@@ -60,6 +60,10 @@ const INSTRUCTIONS: &'static [(&str, i32)] = &[
 	("WD", 0xDC)
 ];
 
+const FORMAT_1: &'static [&str] = &["FIX", "FLOAT", "HIO", "NORM", "SIO", "TIO"];
+const FORMAT_2: &'static [&str] = &["ADDR", "CLEAR", "COMPR", "DIVR", "MULR", "RMO", "SHIFTL",
+	"SHIFTR", "SUBR", "SVC", "TIXR"];
+
 const DIRECTIVES: &'static [&str] = &["START", "END", "BYTE", "WORD", "RESB", "RESW", "RESR", "EXPORTS", "BASE"];
 
 pub fn is_instruction(str: &str) -> bool {
@@ -74,4 +78,18 @@ pub fn is_instruction(str: &str) -> bool {
 
 pub fn is_directive(str: &str) -> bool {
 	return DIRECTIVES.contains(&str);
+}
+
+pub fn get_instruction_format(opcode: &str) -> i32 {
+	let opcode_trimmed = opcode.trim_start_matches("+");
+
+	return if opcode.starts_with("+") {
+		4
+	} else if FORMAT_1.contains(&opcode_trimmed) {
+		1
+	} else if FORMAT_2.contains(&opcode_trimmed) {
+		2
+	} else {
+		3
+	};
 }
