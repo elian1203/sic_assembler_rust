@@ -67,9 +67,9 @@ const FORMAT_2: &'static [&str] = &["ADDR", "CLEAR", "COMPR", "DIVR", "MULR", "R
 const DIRECTIVES: &'static [&str] = &["START", "END", "BYTE", "WORD", "RESB", "RESW", "RESR", "EXPORTS", "BASE"];
 
 pub fn is_instruction(str: &str) -> bool {
-	let test = str.trim_start_matches("+");
+	let str = str.trim_start_matches("+");
 	for (instruction, hex) in INSTRUCTIONS {
-		if instruction == &test {
+		if *instruction == str {
 			return true;
 		}
 	}
@@ -92,4 +92,14 @@ pub fn get_instruction_format(opcode: &str) -> i32 {
 	} else {
 		3
 	};
+}
+
+pub fn get_instruction_hex(opcode: &str) -> i32 {
+	let opcode = opcode.trim_start_matches("+");
+	for (instruction, hex) in INSTRUCTIONS {
+		if *instruction == opcode {
+			return *hex;
+		}
+	}
+	return -1;
 }

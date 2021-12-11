@@ -2,23 +2,22 @@ use std::cell::Cell;
 use std::process::exit;
 use std::string::String;
 
-use crate::instructions;
 use crate::instructions::*;
 use crate::util;
 
-struct Symbol {
-	name: String,
-	memory_location: Cell<i32>,
+pub struct Symbol {
+	pub name: String,
+	pub memory_location: Cell<i32>,
 }
 
 pub struct SymbolTable {
-	symbols: Vec<Symbol>,
-	memory_locations: Vec<i32>,
-	starting_memory_location: Cell<i32>,
-	first_instruction: Cell<i32>,
-	total_memory_usage: Cell<i32>,
-	base_location: Cell<i32>,
-	program_name: Cell<String>,
+	pub symbols: Vec<Symbol>,
+	pub memory_locations: Vec<i32>,
+	pub starting_memory_location: Cell<i32>,
+	pub first_instruction: Cell<i32>,
+	pub total_memory_usage: Cell<i32>,
+	pub base_location: Cell<i32>,
+	pub program_name: Cell<String>,
 }
 
 impl SymbolTable {
@@ -33,16 +32,8 @@ impl SymbolTable {
 			program_name: Cell::new("".to_string()),
 		}
 	}
-}
 
-pub trait SymbolTablePublic {
-	fn parse_symbol_table(&mut self, filename: &str);
-	fn contains_symbol(&self, name: &str) -> bool;
-	fn print_symbol_table(&self);
-}
-
-impl SymbolTablePublic for SymbolTable {
-	fn parse_symbol_table(&mut self, filename: &str) {
+	pub fn parse_symbol_table(&mut self, filename: &str) {
 		if let Ok(lines) = util::read_lines(filename) {
 			let mut line_number: i32 = 0;
 			let mut current_memory_location: i32 = 0;
@@ -74,7 +65,7 @@ impl SymbolTablePublic for SymbolTable {
 		}
 	}
 
-	fn contains_symbol(&self, name: &str) -> bool {
+	pub fn contains_symbol(&self, name: &str) -> bool {
 		for symbol in &self.symbols {
 			if symbol.name == name {
 				return true;
@@ -83,21 +74,12 @@ impl SymbolTablePublic for SymbolTable {
 		return false;
 	}
 
-	fn print_symbol_table(&self) {
+	pub fn print_symbol_table(&self) {
 		for symbol in &self.symbols {
 			println!("{: >6}\t{:X}", symbol.name, symbol.memory_location.get());
 		}
 	}
-}
 
-trait SymbolTablePrivate {
-	fn parse_line(&mut self, line: String, line_number: i32, current_memory_location: &mut i32);
-	fn handle_instruction(&self, current_memory_location: &mut i32, instruction: &str);
-	fn handle_directive(&self, line_number: i32, current_memory_location: &mut i32, directive: &str, operand: Option<&str>);
-	fn add_symbol(&mut self, line_number: i32, name: &str, memory_location: i32);
-}
-
-impl SymbolTablePrivate for SymbolTable {
 	fn parse_line(&mut self, line: String, line_number: i32, current_memory_location: &mut i32) {
 		// ignore comments
 		if line.starts_with("#") {
@@ -256,7 +238,7 @@ impl SymbolTablePrivate for SymbolTable {
 	}
 }
 
-fn sic_line_to_vector(line: String) -> Vec<String> {
+pub fn sic_line_to_vector(line: String) -> Vec<String> {
 	let mut temp: String = String::from("");
 	let mut vector: Vec<String> = vec![];
 

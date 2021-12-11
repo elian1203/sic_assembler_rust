@@ -5,7 +5,6 @@ mod scoff;
 
 use std::env;
 use std::process::exit;
-use crate::symbols::SymbolTablePublic;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -15,7 +14,11 @@ fn main() {
         exit(0);
     }
 
+    let filename = &args[1];
+
     let mut symbol_table = symbols::SymbolTable::new();
-    symbol_table.parse_symbol_table(&args[1]);
+    symbol_table.parse_symbol_table(filename);
     symbol_table.print_symbol_table();
+
+    scoff::write_object_file(filename, symbol_table);
 }
