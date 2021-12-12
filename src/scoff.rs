@@ -1,3 +1,5 @@
+use std::fmt::format;
+use std::ops::BitAndAssign;
 use std::process::exit;
 
 use hex;
@@ -77,6 +79,7 @@ fn get_instruction_code(symbol_table: &SymbolTable, line_number: usize,
 	let mut plus_symbol = false;
 	let mut hash_symbol = false;
 	let mut at_symbol = false;
+	let mut x_index = false;
 
 	if opcode.starts_with("+") {
 		plus_symbol = true;
@@ -91,6 +94,11 @@ fn get_instruction_code(symbol_table: &SymbolTable, line_number: usize,
 	} else if operand.starts_with("#") {
 		at_symbol = true;
 		operand = operand.as_str()[1..].to_owned();
+	}
+
+	if operand.contains(",") {
+		operand = operand.split(",").collect::<Vec<&str>>()[0].to_string();
+		x_index = true;
 	}
 
 	match instruction_format {
@@ -136,7 +144,55 @@ fn get_instruction_code(symbol_table: &SymbolTable, line_number: usize,
 		}
 		3 => {
 			// format 3
-			"".to_owned()
+			let mut first_byte = opcode_hex;
+
+			if hash_symbol {
+				// i bit flipped
+				first_byte += 1;
+			} else if at_symbol {
+				// n bit flipped
+				first_byte += 2;
+			} else {
+				// n & i bits flipped
+				first_byte += 3;
+			}
+
+			let symbol_location = symbol_table.get_symbol_location(&operand);
+
+			let mut displacement = if hash_symbol && symbol_location == -1 {
+				let memory_address_input = parse_str_i32_or_error(Some(&operand), 10,
+				                                                  format!("Error (line {}): Invalid symbol provided!", line_number));
+				memory_address_input
+			} else if symbol_location == -1 {
+				// RSUB with no operand
+				0
+			} else {
+				let program_counter = current_memory_location + 3;
+				let program_counter_displacement = symbol_location - program_counter;
+				let base_displacement = if symbol_table.base_location == -1 { 4096 } else { symbol_location - symbol_table.base_location };
+
+				if program_counter_displacement >= -2048 && program_counter_displacement < 2048 {
+					// use pc-relative addressing
+					let mut p_bit = 8192;
+					if program_counter_displacement < 0 {
+						p_bit += 4096;
+					}
+					program_counter_displacement + p_bit
+				} else if base_displacement >= 0 && base_displacement < 4096 {
+					// use base-relative addressing
+					let b_bit = 16384;
+					base_displacement + b_bit
+				} else {
+					symbol_location
+				}
+			};
+
+			if x_index {
+				// use x-indexing
+				displacement += 32768;
+			}
+
+			format!("T{:0>6X}03{:0>2X}{:0>4X}", current_memory_location, first_byte, displacement)
 		}
 		_ => {
 			// format 4
