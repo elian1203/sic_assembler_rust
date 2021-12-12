@@ -1,5 +1,3 @@
-use std::fmt::format;
-use std::ops::BitAndAssign;
 use std::process::exit;
 
 use hex;
@@ -46,7 +44,6 @@ pub fn write_object_file(filename: &str, mut symbol_table: SymbolTable) {
 			};
 
 			if text_record.len() > 0 {
-				println!("{}", text_record);
 				text_records.push(text_record);
 			}
 		}
@@ -73,18 +70,11 @@ fn get_instruction_code(symbol_table: &SymbolTable, line_number: usize,
 	let current_memory_location = symbol_table.memory_locations.get(line_number - 1).unwrap();
 	let opcode_hex = get_instruction_hex(&opcode);
 
-	let mut opcode = opcode.clone();
 	let instruction_format = get_instruction_format(&*opcode);
 
-	let mut plus_symbol = false;
 	let mut hash_symbol = false;
 	let mut at_symbol = false;
 	let mut x_index = false;
-
-	if opcode.starts_with("+") {
-		plus_symbol = true;
-		opcode = opcode.as_str()[1..].to_owned();
-	}
 
 	let mut operand = if operand.is_some() { operand.unwrap().clone() } else { "".to_owned() };
 
@@ -196,7 +186,38 @@ fn get_instruction_code(symbol_table: &SymbolTable, line_number: usize,
 		}
 		_ => {
 			// format 4
-			"".to_owned()
+			let mut first_byte = opcode_hex;
+
+			if hash_symbol {
+				// i bit flipped
+				first_byte += 1;
+			} else if at_symbol {
+				// n bit flipped
+				first_byte += 2;
+			} else {
+				// n & i bits flipped
+				first_byte += 3;
+			}
+
+			let symbol_location = symbol_table.get_symbol_location(&operand);
+
+			let mut displacement = if hash_symbol && symbol_location == -1 {
+				let memory_address_input = parse_str_i32_or_error(Some(&operand), 10,
+				                                                  format!("Error (line {}): Invalid symbol provided!", line_number));
+				memory_address_input
+			} else {
+				symbol_location
+			};
+
+			if x_index {
+				// use x-indexing
+				displacement += 8388608;
+			}
+
+			// flip e bit
+			displacement += 1048576;
+
+			format!("T{:0>6X}04{:0>2X}{:0>6X}", current_memory_location, first_byte, displacement)
 		}
 	}
 }
@@ -236,7 +257,18 @@ fn get_directive_code(symbol_table: &mut SymbolTable, line_number: usize, direct
 			String::new()
 		}
 		"BASE" => {
-			symbol_table.base_location = current_memory_location;
+			if !operand.is_some() {
+				println!("Error (line {}): Base directive has no symbol!", line_number);
+				exit(1);
+			}
+
+			let symbol_location = symbol_table.get_symbol_location(operand.unwrap());
+			if symbol_location == -1 {
+				println!("Error (line {}): Base directive has invalid symbol!", line_number);
+				exit(1);
+			}
+
+			symbol_table.base_location = symbol_location;
 			String::new()
 		}
 		&_ => {
