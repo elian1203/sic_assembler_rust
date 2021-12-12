@@ -13,5 +13,5 @@ LOOP	LDX	ZERO
 	STCH	DST,X
 	TIX	ELEVEN
 	JLT	LOOP
-FIN	END	LOOPA
+FIN	END	LOOP
 #This is the end of the program

@@ -94,7 +94,7 @@ pub fn get_instruction_format(opcode: &str) -> i32 {
 	};
 }
 
-pub fn get_instruction_hex(opcode: &str) -> i32 {
+pub fn get_instruction_hex(opcode: &String) -> i32 {
 	let opcode = opcode.trim_start_matches("+");
 	for (instruction, hex) in INSTRUCTIONS {
 		if *instruction == opcode {

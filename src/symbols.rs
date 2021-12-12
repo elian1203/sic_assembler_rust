@@ -3,7 +3,7 @@ use std::process::exit;
 use std::string::String;
 
 use crate::instructions::*;
-use crate::util;
+use crate::util::*;
 
 pub struct Symbol {
 	pub name: String,
@@ -34,7 +34,7 @@ impl SymbolTable {
 	}
 
 	pub fn parse_symbol_table(&mut self, filename: &str) {
-		if let Ok(lines) = util::read_lines(filename) {
+		if let Ok(lines) = read_lines(filename) {
 			let mut line_number: i32 = 0;
 			let mut current_memory_location: i32 = 0;
 
@@ -72,6 +72,15 @@ impl SymbolTable {
 			}
 		}
 		return false;
+	}
+
+	pub fn get_symbol_location(&self, name: &String) -> i32 {
+		for symbol in &self.symbols {
+			if symbol.name == *name {
+				return symbol.memory_location.get();
+			}
+		}
+		return -1;
 	}
 
 	pub fn print_symbol_table(&self) {
@@ -160,11 +169,11 @@ impl SymbolTable {
 				}
 				let operand_string = String::from(operand.unwrap());
 				if operand_string.starts_with("C'") && operand_string.ends_with("'") {
-					let stripped = operand_string.strip_prefix("C'").unwrap();
+					let stripped = operand_string.strip_prefix("C'").unwrap().strip_suffix("'").unwrap();
 					let num_bytes: i32 = stripped.len() as i32;
 					*current_memory_location += num_bytes;
 				} else if operand_string.starts_with("X'") && operand_string.ends_with("'") {
-					let stripped = operand_string.strip_prefix("X'").unwrap();
+					let stripped = operand_string.strip_prefix("X'").unwrap().strip_suffix("'").unwrap();
 					let num_bytes: i32 = (stripped.len() / 2 + stripped.len() % 2) as i32;
 					*current_memory_location += num_bytes;
 				} else {
@@ -270,17 +279,4 @@ pub fn sic_line_to_vector(line: String) -> Vec<String> {
 	}
 
 	vector
-}
-
-fn parse_str_i32_or_error(str: Option<&str>, base: u32, error_message: String) -> i32 {
-	if str.is_none() {
-		println!("{}", error_message);
-		exit(1);
-	}
-	let parsed = i32::from_str_radix(str.unwrap(), base);
-	if parsed.is_err() {
-		println!("{}", error_message);
-		exit(1);
-	}
-	return parsed.unwrap();
 }

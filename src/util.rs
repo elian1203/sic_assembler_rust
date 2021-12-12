@@ -24,3 +24,29 @@ pub fn write_lines<P: AsRef<Path>>(filename: P, lines: Vec<String>) {
 		println!("Could not write to file! Check folder permissions.");
 	}
 }
+
+pub fn parse_str_i32_or_error(str: Option<&str>, base: u32, error_message: String) -> i32 {
+	if str.is_none() {
+		println!("{}", error_message);
+		exit(1);
+	}
+	let parsed = i32::from_str_radix(str.unwrap(), base);
+	if parsed.is_err() {
+		println!("{}", error_message);
+		exit(1);
+	}
+	return parsed.unwrap();
+}
+
+pub fn parse_string_i32_or_error(str: Option<&String>, base: u32, error_message: String) -> i32 {
+	if str.is_none() {
+		println!("{}", error_message);
+		exit(1);
+	}
+	let parsed = i32::from_str_radix(str.unwrap(), base);
+	if parsed.is_err() {
+		println!("{}", error_message);
+		exit(1);
+	}
+	return parsed.unwrap();
+}
