@@ -6,7 +6,7 @@ use crate::instructions::*;
 use crate::symbols::*;
 use crate::util::*;
 
-pub fn write_object_file(filename: &str, symbol_table: SymbolTable) {
+pub fn write_object_file(filename: &str, mut symbol_table: SymbolTable) {
 	if let Ok(lines) = read_lines(filename) {
 		let mut text_records: Vec<String> = vec![];
 		let mut mod_records: Vec<String> = vec![];
@@ -25,7 +25,6 @@ pub fn write_object_file(filename: &str, symbol_table: SymbolTable) {
 			}
 
 			let words = sic_line_to_vector(line);
-			let num_words = words.len();
 
 			let str1 = words.get(0);
 			let str2 = words.get(1);
@@ -34,11 +33,11 @@ pub fn write_object_file(filename: &str, symbol_table: SymbolTable) {
 			let text_record = if str1.is_some() && is_instruction(str1.unwrap()) {
 				get_instruction_code(&symbol_table, line_number, str1.unwrap(), str2, &mut mod_records)
 			} else if str1.is_some() && is_directive(str1.unwrap()) {
-				get_directive_code(&symbol_table, line_number, str1.unwrap(), str2)
+				get_directive_code(&mut symbol_table, line_number, str1.unwrap(), str2)
 			} else if str2.is_some() && is_instruction(str2.unwrap()) {
 				get_instruction_code(&symbol_table, line_number, str2.unwrap(), str3, &mut mod_records)
 			} else if str2.is_some() && is_directive(str2.unwrap()) {
-				get_directive_code(&symbol_table, line_number, str2.unwrap(), str3)
+				get_directive_code(&mut symbol_table, line_number, str2.unwrap(), str3)
 			} else {
 				println!("Error (line {}): Could not parse line!", line_number);
 				exit(1);
@@ -51,13 +50,13 @@ pub fn write_object_file(filename: &str, symbol_table: SymbolTable) {
 		}
 
 		let mut object_records: Vec<String> = vec![];
-		let program_name = symbol_table.program_name.take();
+		let program_name = symbol_table.program_name;
 		object_records.push(format!("H{: <7}{:0>6X}{:0>6X}", program_name,
-		                            symbol_table.starting_memory_location.get(),
-		                            symbol_table.total_memory_usage.get()));
+		                            symbol_table.starting_memory_location,
+		                            symbol_table.total_memory_usage));
 		object_records.extend(text_records);
 		object_records.extend(mod_records);
-		object_records.push(format!("E{:0<6X}", symbol_table.first_instruction.get()));
+		object_records.push(format!("E{:0<6X}", symbol_table.first_instruction));
 
 		let mut output_file = String::from(filename);
 		output_file.push_str(".obj");
@@ -146,7 +145,7 @@ fn get_instruction_code(symbol_table: &SymbolTable, line_number: usize,
 	}
 }
 
-fn get_directive_code(symbol_table: &SymbolTable, line_number: usize, directive: &String,
+fn get_directive_code(symbol_table: &mut SymbolTable, line_number: usize, directive: &String,
                       operand: Option<&String>) -> String {
 	let mut current_memory_location = symbol_table.memory_locations.get(line_number - 1).unwrap().clone();
 
@@ -181,7 +180,7 @@ fn get_directive_code(symbol_table: &SymbolTable, line_number: usize, directive:
 			String::new()
 		}
 		"BASE" => {
-			symbol_table.base_location.set(current_memory_location);
+			symbol_table.base_location = current_memory_location;
 			String::new()
 		}
 		&_ => {

@@ -6,17 +6,17 @@ use crate::util::*;
 
 pub struct Symbol {
 	pub name: String,
-	pub memory_location: Cell<i32>,
+	pub memory_location: i32,
 }
 
 pub struct SymbolTable {
 	pub symbols: Vec<Symbol>,
 	pub memory_locations: Vec<i32>,
-	pub starting_memory_location: Cell<i32>,
-	pub first_instruction: Cell<i32>,
-	pub total_memory_usage: Cell<i32>,
-	pub base_location: Cell<i32>,
-	pub program_name: Cell<String>,
+	pub starting_memory_location: i32,
+	pub first_instruction: i32,
+	pub total_memory_usage: i32,
+	pub base_location: i32,
+	pub program_name: String,
 }
 
 impl SymbolTable {
@@ -24,11 +24,11 @@ impl SymbolTable {
 		SymbolTable {
 			symbols: vec![],
 			memory_locations: vec![],
-			starting_memory_location: Cell::new(-1),
-			first_instruction: Cell::new(-1),
-			total_memory_usage: Cell::new(-1),
-			base_location: Cell::new(-1),
-			program_name: Cell::new("".to_string()),
+			starting_memory_location: -1,
+			first_instruction: -1,
+			total_memory_usage: -1,
+			base_location: -1,
+			program_name: "".to_string(),
 		}
 	}
 
@@ -51,15 +51,15 @@ impl SymbolTable {
 				exit(1);
 			}
 
-			if self.starting_memory_location.get() == -1 {
+			if self.starting_memory_location == -1 {
 				println!("Error (line {}): No START directive found!", line_number);
 				exit(1);
 			}
 
-			self.total_memory_usage.set(current_memory_location);
+			self.total_memory_usage = current_memory_location;
 
-			for symbol in &self.symbols {
-				symbol.memory_location.set(symbol.memory_location.get() + self.starting_memory_location.get());
+			for symbol in &mut self.symbols {
+				symbol.memory_location += self.starting_memory_location;
 			}
 		}
 	}
@@ -76,7 +76,7 @@ impl SymbolTable {
 	pub fn get_symbol_location(&self, name: &String) -> i32 {
 		for symbol in &self.symbols {
 			if symbol.name == *name {
-				return symbol.memory_location.get();
+				return symbol.memory_location;
 			}
 		}
 		return -1;
@@ -84,7 +84,7 @@ impl SymbolTable {
 
 	pub fn print_symbol_table(&self) {
 		for symbol in &self.symbols {
-			println!("{: >6}\t{:X}", symbol.name, symbol.memory_location.get());
+			println!("{: >6}\t{:X}", symbol.name, symbol.memory_location);
 		}
 	}
 
@@ -139,7 +139,7 @@ impl SymbolTable {
 				self.handle_directive(line_number, current_memory_location, str2, Some(str3));
 
 				if str2 == "START" {
-					self.program_name.set(str2.clone());
+					self.program_name = str2.clone();
 				}
 			} else {
 				println!("Error (line {}): Invalid line! Not an instruction or directive!", line_number);
@@ -148,18 +148,18 @@ impl SymbolTable {
 		}
 	}
 
-	fn handle_instruction(&self, current_memory_location: &mut i32, instruction: &str) {
-		if self.first_instruction.get() == -1 {
-			self.first_instruction.set(*current_memory_location);
+	fn handle_instruction(&mut self, current_memory_location: &mut i32, instruction: &str) {
+		if self.first_instruction == -1 {
+			self.first_instruction = *current_memory_location;
 		}
 		*current_memory_location += get_instruction_format(instruction);
 	}
 
-	fn handle_directive(&self, line_number: i32, current_memory_location: &mut i32, directive: &str, operand: Option<&str>) {
+	fn handle_directive(&mut self, line_number: i32, current_memory_location: &mut i32, directive: &str, operand: Option<&str>) {
 		match directive {
 			"START" => {
 				let location = parse_str_i32_or_error(operand, 16, format!("error (line {}): invalid or no operand provided for directive.", line_number));
-				self.starting_memory_location.set(location);
+				self.starting_memory_location = location;
 			}
 			"BYTE" => {
 				if operand.is_none() {
@@ -236,11 +236,10 @@ impl SymbolTable {
 				exit(1);
 			}
 		}
-		let location = Cell::new(memory_location);
 
 		let symbol = Symbol {
 			name: str,
-			memory_location: location,
+			memory_location,
 		};
 		self.symbols.push(symbol);
 	}
