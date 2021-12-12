@@ -18,7 +18,7 @@ fn main() {
 
     let mut symbol_table = symbols::SymbolTable::new();
     symbol_table.parse_symbol_table(filename);
-    symbol_table.print_symbol_table();
+    // symbol_table.print_symbol_table();
 
     scoff::write_object_file(filename, symbol_table);
 }
