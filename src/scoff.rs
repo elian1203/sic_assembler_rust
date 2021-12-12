@@ -1,5 +1,3 @@
-use std::borrow::Borrow;
-use std::fmt::format;
 use std::process::exit;
 
 use hex;
@@ -44,7 +42,6 @@ pub fn write_object_file(filename: &str, symbol_table: SymbolTable) {
 			} else {
 				println!("Error (line {}): Could not parse line!", line_number);
 				exit(1);
-				"".to_owned()
 			};
 
 			if text_record.len() > 0 {

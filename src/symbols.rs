@@ -1,7 +1,5 @@
-use std::borrow::Borrow;
 use std::cell::Cell;
 use std::process::exit;
-use std::string::String;
 
 use crate::instructions::*;
 use crate::util::*;
@@ -249,7 +247,7 @@ impl SymbolTable {
 }
 
 pub fn sic_line_to_vector(line: String) -> Vec<String> {
-	let mut temp: String = String::from("");
+	let mut temp: String = String::new();
 	let mut vector: Vec<String> = vec![];
 
 	let mut in_string: bool = false;
@@ -258,12 +256,12 @@ pub fn sic_line_to_vector(line: String) -> Vec<String> {
 		if c == '\r' || c == '\n' {
 			if temp.len() > 0 {
 				vector.push(temp);
-				temp = String::from("");
+				temp = String::new();
 			}
 		} else if c == ' ' || c == '\t' {
 			if !in_string && temp.len() > 0 {
 				vector.push(temp);
-				temp = String::from("");
+				temp = String::new();
 			} else if in_string {
 				temp.push(c);
 			}
@@ -276,7 +274,6 @@ pub fn sic_line_to_vector(line: String) -> Vec<String> {
 	}
 	if temp.len() > 0 {
 		vector.push(temp);
-		temp = String::from("");
 	}
 
 	vector

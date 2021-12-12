@@ -68,7 +68,7 @@ const DIRECTIVES: &'static [&str] = &["START", "END", "BYTE", "WORD", "RESB", "R
 
 pub fn is_instruction(str: &str) -> bool {
 	let str = str.trim_start_matches("+");
-	for (instruction, hex) in INSTRUCTIONS {
+	for (instruction, _hex) in INSTRUCTIONS {
 		if *instruction == str {
 			return true;
 		}
