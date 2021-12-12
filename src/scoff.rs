@@ -173,6 +173,13 @@ fn get_instruction_code(symbol_table: &SymbolTable, line_number: usize,
 					let b_bit = 16384;
 					base_displacement + b_bit
 				} else {
+					// since using direct addressing we must add a modification record
+					let mod_record = format!("M{:0>6X}{:0>2X}+{: <6}",
+					                         current_memory_location + 1,
+					                         4,
+					                         symbol_table.program_name);
+					modifications.push(mod_record);
+
 					symbol_location
 				}
 			};
@@ -206,6 +213,13 @@ fn get_instruction_code(symbol_table: &SymbolTable, line_number: usize,
 				                                                  format!("Error (line {}): Invalid symbol provided!", line_number));
 				memory_address_input
 			} else {
+				// since using direct addressing we must add a modification record
+				let mod_record = format!("M{:0>6X}{:0>2X}+{: <6}",
+				                         current_memory_location + 1,
+				                         4,
+				                         symbol_table.program_name);
+				modifications.push(mod_record);
+
 				symbol_location
 			};
 
