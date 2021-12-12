@@ -52,7 +52,7 @@ pub fn write_object_file(filename: &str, symbol_table: SymbolTable) {
 
 		let mut object_records: Vec<String> = vec![];
 		let program_name = symbol_table.program_name.take();
-		object_records.push(format!("H{: >7}{:0>6X}{:0>6X}", program_name,
+		object_records.push(format!("H{: <7}{:0>6X}{:0>6X}", program_name,
 		                            symbol_table.starting_memory_location.get(),
 		                            symbol_table.total_memory_usage.get()));
 		object_records.extend(text_records);
